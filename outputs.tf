@@ -1,6 +1,6 @@
 output "db_host" {
   description = "The FQDN of the deployed database"
-  value       = azurerm_postgresql_server.db.fqdn
+  value       = azurerm_postgresql_flexible_server.db.fqdn
 }
 
 output "db_port" {
@@ -10,16 +10,16 @@ output "db_port" {
 
 output "db_name" {
   description = "The name of the default database created"
-  value       = azurerm_postgresql_database.db.name
+  value       = azurerm_postgresql_flexible_server_database.db.name
 }
 
 output "db_username" {
   description = "The username to use when connecting to the database as the admin"
-  value       = "${azurerm_postgresql_server.db.administrator_login}@${azurerm_postgresql_server.db.name}"
+  value       = azurerm_postgresql_flexible_server.db.administrator_login
 }
 
 output "db_password" {
   description = "The password to use when connecting to the database as the admin"
-  value       = azurerm_postgresql_server.db.administrator_login_password
+  value       = azurerm_postgresql_flexible_server.db.administrator_password
   sensitive   = true
 }
