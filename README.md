@@ -2,11 +2,15 @@
 
 # terraform-azurerm-postgresql-server
 
-A Terraform module for deploying a simple PostgreSQL instance.
+A Terraform module for deploying a PostgreSQL Flexible Server instance with private VNet integration.
 
 ## Usage
 
-Before deploying this module you will need to have a vNet deployed with a subnet that has `Microsoft.Sql` enabled as a `service_endpoint`.  Without this other servers you deploy into this subnet will _not_ be able to access the instance securely.
+Before deploying this module you will need to have:
+- A VNet deployed with a subnet that is **delegated to** `Microsoft.DBforPostgreSQL/flexibleServers`
+- The VNet ID for private DNS zone linking
+
+This module creates a PostgreSQL Flexible Server with private-only access (no public endpoint). The database is accessible only from within the configured VNet.
 
 For a working example you can take a look at our [default vNet module](https://github.com/snowplow-devops/terraform-azurerm-vnet) we have for deploying a Snowplow Pipeline stack.
 
@@ -18,12 +22,24 @@ module "snowplow_db" {
   resource_group_name = var.resource_group_name
 
   subnet_id = var.subnet_id_for_servers
+  vnet_id   = var.vnet_id
 
   db_name     = var.db_name
   db_username = var.db_username
   db_password = var.db_password
 }
 ```
+
+## Migration from Single Server
+
+This module has been migrated from the deprecated `azurerm_postgresql_server` to `azurerm_postgresql_flexible_server`. Key changes:
+- PostgreSQL version upgraded from 11 to **16** (default)
+- SKU changed to **B_Standard_B1ms** (burstable, cost-optimized)
+- Storage minimum increased to **32GB** (from 10GB)
+- **Private VNet integration** required (no public access mode)
+- New required variable: `vnet_id`
+- Subnet must be **delegated** to `Microsoft.DBforPostgreSQL/flexibleServers` (not service endpoint)
+- Username format changed: no longer includes `@servername` suffix
 
 ## Requirements
 
@@ -46,10 +62,10 @@ No modules.
 
 | Name | Type |
 |------|------|
-| [azurerm_postgresql_database.db](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/postgresql_database) | resource |
-| [azurerm_postgresql_firewall_rule.custom_rules](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/postgresql_firewall_rule) | resource |
-| [azurerm_postgresql_server.db](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/postgresql_server) | resource |
-| [azurerm_postgresql_virtual_network_rule.vnet_access](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/postgresql_virtual_network_rule) | resource |
+| [azurerm_postgresql_flexible_server.db](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/postgresql_flexible_server) | resource |
+| [azurerm_postgresql_flexible_server_database.db](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/postgresql_flexible_server_database) | resource |
+| [azurerm_private_dns_zone.postgres](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/private_dns_zone) | resource |
+| [azurerm_private_dns_zone_virtual_network_link.postgres](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/private_dns_zone_virtual_network_link) | resource |
 | [azurerm_resource_group.rg](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/data-sources/resource_group) | data source |
 
 ## Inputs
@@ -61,14 +77,12 @@ No modules.
 | <a name="input_db_username"></a> [db\_username](#input\_db\_username) | The name of the administration user to create | `string` | n/a | yes |
 | <a name="input_name"></a> [name](#input\_name) | A name which will be pre-pended to the resources created | `string` | n/a | yes |
 | <a name="input_resource_group_name"></a> [resource\_group\_name](#input\_resource\_group\_name) | The name of the resource group to deploy the service into | `string` | n/a | yes |
-| <a name="input_subnet_id"></a> [subnet\_id](#input\_subnet\_id) | The ID of a subnet to bind the database service into (must have 'Microsoft.Sql' enabled as a service\_endpoint) | `string` | n/a | yes |
-| <a name="input_additional_ip_allowlist"></a> [additional\_ip\_allowlist](#input\_additional\_ip\_allowlist) | An optional list of CIDR ranges to allow traffic from | `list(any)` | `[]` | no |
-| <a name="input_auto_grow_enabled"></a> [auto\_grow\_enabled](#input\_auto\_grow\_enabled) | Whether the disk space should automatically expand | `bool` | `false` | no |
+| <a name="input_subnet_id"></a> [subnet\_id](#input\_subnet\_id) | The ID of a subnet to bind the database service into (must be delegated to 'Microsoft.DBforPostgreSQL/flexibleServers') | `string` | n/a | yes |
+| <a name="input_vnet_id"></a> [vnet\_id](#input\_vnet\_id) | The ID of the VNet for private DNS zone linking | `string` | n/a | yes |
 | <a name="input_backup_retention_days"></a> [backup\_retention\_days](#input\_backup\_retention\_days) | The number of days to retain backups | `number` | `7` | no |
-| <a name="input_max_allocated_storage_mb"></a> [max\_allocated\_storage\_mb](#input\_max\_allocated\_storage\_mb) | The maximum size of the attached disk in MB | `number` | `10240` | no |
-| <a name="input_postgresql_version"></a> [postgresql\_version](#input\_postgresql\_version) | The version of PostgreSQL to deploy | `string` | `"11"` | no |
-| <a name="input_publicly_accessible"></a> [publicly\_accessible](#input\_publicly\_accessible) | Whether to make this instance accessible over the internet | `bool` | `true` | no |
-| <a name="input_sku"></a> [sku](#input\_sku) | The SKU of the server instance to deploy | `string` | `"GP_Gen5_2"` | no |
+| <a name="input_max_allocated_storage_mb"></a> [max\_allocated\_storage\_mb](#input\_max\_allocated\_storage\_mb) | The maximum size of the attached disk in MB (minimum 32768 for flexible server) | `number` | `32768` | no |
+| <a name="input_postgresql_version"></a> [postgresql\_version](#input\_postgresql\_version) | The version of PostgreSQL to deploy | `string` | `"16"` | no |
+| <a name="input_sku"></a> [sku](#input\_sku) | The SKU of the server instance to deploy | `string` | `"B_Standard_B1ms"` | no |
 | <a name="input_tags"></a> [tags](#input\_tags) | The tags to append to this resource | `map(string)` | `{}` | no |
 
 ## Outputs
