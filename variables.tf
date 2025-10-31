@@ -11,17 +11,22 @@ variable "resource_group_name" {
 variable "sku" {
   description = "The SKU of the server instance to deploy"
   type        = string
-  default     = "GP_Gen5_2"
+  default     = "B_Standard_B1ms"
 }
 
 variable "postgresql_version" {
   description = "The version of PostgreSQL to deploy"
   type        = string
-  default     = "11"
+  default     = "16"
 }
 
 variable "subnet_id" {
-  description = "The ID of a subnet to bind the database service into (must have 'Microsoft.Sql' enabled as a service_endpoint)"
+  description = "The ID of a subnet to bind the database service into (must be delegated to 'Microsoft.DBforPostgreSQL/flexibleServers')"
+  type        = string
+}
+
+variable "vnet_id" {
+  description = "The ID of the VNet for private DNS zone linking"
   type        = string
 }
 
@@ -41,28 +46,10 @@ variable "db_password" {
   sensitive   = true
 }
 
-variable "publicly_accessible" {
-  description = "Whether to make this instance accessible over the internet"
-  type        = bool
-  default     = true
-}
-
-variable "additional_ip_allowlist" {
-  description = "An optional list of CIDR ranges to allow traffic from"
-  type        = list(any)
-  default     = []
-}
-
 variable "max_allocated_storage_mb" {
-  description = "The maximum size of the attached disk in MB"
+  description = "The maximum size of the attached disk in MB (minimum 32768 for flexible server)"
   type        = number
-  default     = 10240
-}
-
-variable "auto_grow_enabled" {
-  description = "Whether the disk space should automatically expand"
-  type        = bool
-  default     = false
+  default     = 32768
 }
 
 variable "backup_retention_days" {
